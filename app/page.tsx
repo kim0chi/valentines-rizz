@@ -104,7 +104,13 @@ export default function ValentinePage() {
     setStage('valentine');
   };
 
-  const handleNoHover = () => {
+  const handleNoHover = (e?: React.MouseEvent | React.TouchEvent) => {
+    // Prevent default behavior and stop propagation to avoid phantom clicks
+    if (e) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
+
     // Play Vine Boom sound effect
     if (audioRef.current) {
       audioRef.current.volume = 1.0; // Set volume to maximum
