@@ -1,12 +1,7 @@
 'use client';
 
 import { useEffect, useState, useRef } from 'react';
-import dynamic from 'next/dynamic';
 import Image from 'next/image';
-
-const FlowerScene = dynamic(() => import('@/components/flower-scene'), {
-  ssr: false,
-});
 
 type Stage = 'greeting' | 'photo-request' | 'photo-display' | 'valentine' | 'accepted';
 
@@ -72,6 +67,18 @@ export default function ValentinePage() {
   const handlePhotoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
+      // Check file size (max 5MB)
+      if (file.size > 5 * 1024 * 1024) {
+        alert('Photo size must be less than 5MB');
+        return;
+      }
+      
+      // Check file type
+      if (!file.type.startsWith('image/')) {
+        alert('Please upload an image file');
+        return;
+      }
+
       const reader = new FileReader();
       reader.onloadend = () => {
         // Trigger camera flash effect
@@ -81,6 +88,9 @@ export default function ValentinePage() {
           setStage('photo-display');
           setShowCameraFlash(false);
         }, 1000);
+      };
+      reader.onerror = () => {
+        alert('Error reading file. Please try again.');
       };
       reader.readAsDataURL(file);
     }
