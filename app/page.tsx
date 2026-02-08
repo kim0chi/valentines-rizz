@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useRef } from 'react';
 import Image from 'next/image';
+import { getAssetPath } from '@/lib/assetPath';
 
 type Stage = 'greeting' | 'photo-request' | 'photo-display' | 'valentine' | 'accepted';
 
@@ -144,7 +145,7 @@ export default function ValentinePage() {
       {stage !== 'accepted' && (
         <audio 
           ref={bgMusicRef} 
-          src="/Rizz Song (slowed  Reverb)  Edit.mp3" 
+          src={getAssetPath("/Rizz Song (slowed  Reverb)  Edit.mp3")} 
           loop 
           preload="auto" 
           className="hidden"
@@ -154,7 +155,7 @@ export default function ValentinePage() {
       {stage === 'accepted' && (
         <audio 
           ref={romanticMusicRef} 
-          src="/Romantic music sound effect.mp3" 
+          src={getAssetPath("/Romantic music sound effect.mp3")} 
           loop 
           preload="auto" 
           className="hidden"
@@ -174,7 +175,7 @@ export default function ValentinePage() {
           }`}
         >
           <Image
-            src="/rizzface.gif"
+            src={getAssetPath("/rizzface.gif")}
             alt="Rizzface"
             width={200}
             height={200}
@@ -218,7 +219,7 @@ export default function ValentinePage() {
           }`}
         >
           <Image
-            src="/wink.gif"
+            src={getAssetPath("/wink.gif")}
             alt="Wink"
             width={200}
             height={200}
@@ -279,7 +280,7 @@ export default function ValentinePage() {
           }`}
         >
           <Image
-            src="/cat-mog-mogginf-cat.gif"
+            src={getAssetPath("/cat-mog-mogginf-cat.gif")}
             alt="Cat mogging"
             width={200}
             height={200}
@@ -338,7 +339,7 @@ export default function ValentinePage() {
     return (
       <main className="w-full min-h-screen bg-black flex flex-col items-center justify-center p-4 overflow-hidden">
         {audioElements}
-        <audio ref={audioRef} src="/Vine Boom sound effect meme.mp3" preload="auto" />
+        <audio ref={audioRef} src={getAssetPath("/Vine Boom sound effect meme.mp3")} preload="auto" />
 
         <div
           className={`mb-6 md:mb-8 transition-all duration-700 ${
@@ -346,7 +347,7 @@ export default function ValentinePage() {
           }`}
         >
           <Image
-            src="/rizz.gif"
+            src={getAssetPath("/rizz.gif")}
             alt="Rizz"
             width={200}
             height={200}
@@ -456,7 +457,7 @@ export default function ValentinePage() {
         }`}
       >
         <Image
-          src="/eminem.gif"
+          src={getAssetPath("/eminem.gif")}
           alt="Eminem"
           width={250}
           height={250}
