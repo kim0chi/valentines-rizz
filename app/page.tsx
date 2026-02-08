@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useLayoutEffect, useState, useRef } from 'react';
 import Image from 'next/image';
 import { getAssetPath } from '@/lib/assetPath';
 
@@ -10,7 +10,7 @@ export default function ValentinePage() {
   const [stage, setStage] = useState<Stage>('greeting');
   const [showText, setShowText] = useState(false);
   const [showButtons, setShowButtons] = useState(false);
-  const [noPosition, setNoPosition] = useState({ x: 0, y: 0 });
+  const [noPosition, setNoPosition] = useState<{ left: number; top: number } | null>(null);
   const [uploadedPhoto, setUploadedPhoto] = useState<string | null>(null);
   const [showCameraFlash, setShowCameraFlash] = useState(false);
   const [audioEnabled, setAudioEnabled] = useState(false);
@@ -18,9 +18,11 @@ export default function ValentinePage() {
   const audioRef = useRef<HTMLAudioElement>(null);
   const bgMusicRef = useRef<HTMLAudioElement>(null);
   const romanticMusicRef = useRef<HTMLAudioElement>(null);
+  const shutterAudioRef = useRef<HTMLAudioElement>(null);
+  const audienceAudioRef = useRef<HTMLAudioElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     // Reset animations when stage changes
     setShowText(false);
     setShowButtons(false);
@@ -29,23 +31,26 @@ export default function ValentinePage() {
     const textTimer = setTimeout(() => setShowText(true), 100);
     const buttonsTimer = setTimeout(() => setShowButtons(true), 800);
 
-    // Stop background music and play romantic music on accepted stage
-    if (stage === 'accepted') {
-      if (bgMusicRef.current) {
-        bgMusicRef.current.pause();
-      }
-      if (romanticMusicRef.current) {
-        romanticMusicRef.current.volume = 0.5;
-        romanticMusicRef.current.play().catch((error) => {
-          console.log('Romantic music play failed:', error);
-        });
-      }
-    }
-
     return () => {
       clearTimeout(textTimer);
       clearTimeout(buttonsTimer);
     };
+  }, [stage]);
+
+  useEffect(() => {
+    // Stop background music and play romantic music on accepted stage
+    if (stage !== 'accepted') return;
+
+    if (bgMusicRef.current) {
+      bgMusicRef.current.pause();
+    }
+
+    if (romanticMusicRef.current) {
+      romanticMusicRef.current.volume = 0.5;
+      romanticMusicRef.current.play().catch((error) => {
+        console.log('Romantic music play failed:', error);
+      });
+    }
   }, [stage]);
 
   const handleGreetingResponse = () => {
@@ -84,6 +89,23 @@ export default function ValentinePage() {
       reader.onloadend = () => {
         // Trigger camera flash effect
         setShowCameraFlash(true);
+
+        if (shutterAudioRef.current) {
+          shutterAudioRef.current.volume = 1.0;
+          shutterAudioRef.current.currentTime = 0;
+          shutterAudioRef.current.play().catch((error) => {
+            console.log('Shutter audio play failed:', error);
+          });
+        }
+
+        if (audienceAudioRef.current) {
+          audienceAudioRef.current.volume = 0.8;
+          audienceAudioRef.current.currentTime = 0;
+          audienceAudioRef.current.play().catch((error) => {
+            console.log('Audience audio play failed:', error);
+          });
+        }
+
         setTimeout(() => {
           setUploadedPhoto(reader.result as string);
           setStage('photo-display');
@@ -120,23 +142,39 @@ export default function ValentinePage() {
       });
     }
 
-    const buttonWidth = 120;
-    const buttonHeight = 60;
-    const padding = 20; // Extra padding from edges
+    const button = noButtonRef.current;
+    if (!button) return;
 
-    // Calculate max bounds to keep button fully visible
-    const maxX = (window.innerWidth - buttonWidth) / 2 - padding;
-    const minX = -(window.innerWidth - buttonWidth) / 2 + padding;
-    const maxY = (window.innerHeight - buttonHeight) / 2 - padding;
-    const minY = -(window.innerHeight - buttonHeight) / 2 + padding;
+    const rect = button.getBoundingClientRect();
+    const viewportWidth = window.innerWidth;
+    const viewportHeight = window.innerHeight;
+    const padding = 16;
 
-    // Generate random position within bounds
-    const randomX = Math.random() * (maxX - minX) + minX;
-    const randomY = Math.random() * (maxY - minY) + minY;
+    const minLeft = padding;
+    const maxLeft = viewportWidth - rect.width - padding;
+    const minTop = padding;
+    const maxTop = viewportHeight - rect.height - padding;
+
+    const clamp = (value: number, min: number, max: number) => {
+      if (max <= min) return min;
+      return Math.min(Math.max(value, min), max);
+    };
+
+    const isMobile = viewportWidth < 768;
+    const minStep = isMobile ? 64 : 100;
+    const maxStep = isMobile ? 130 : 220;
+    const angle = Math.random() * Math.PI * 2;
+    const distance = Math.random() * (maxStep - minStep) + minStep;
+
+    const currentLeft = noPosition ? noPosition.left : rect.left;
+    const currentTop = noPosition ? noPosition.top : rect.top;
+
+    const randomLeft = clamp(currentLeft + Math.cos(angle) * distance, minLeft, maxLeft);
+    const randomTop = clamp(currentTop + Math.sin(angle) * distance, minTop, maxTop);
 
     setNoPosition({
-      x: randomX,
-      y: randomY,
+      left: Math.round(randomLeft),
+      top: Math.round(randomTop),
     });
   };
 
@@ -167,6 +205,18 @@ export default function ValentinePage() {
           className="hidden"
         />
       )}
+      <audio
+        ref={shutterAudioRef}
+        src={getAssetPath('/shutter.mp3')}
+        preload="auto"
+        className="hidden"
+      />
+      <audio
+        ref={audienceAudioRef}
+        src={getAssetPath('/audience.mp3')}
+        preload="auto"
+        className="hidden"
+      />
     </>
   );
 
@@ -371,8 +421,8 @@ export default function ValentinePage() {
         </h1>
 
         <div
-          className={`flex gap-4 md:gap-6 transition-all duration-700 ${
-            showButtons ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'
+          className={`flex gap-4 md:gap-6 transition-opacity duration-700 ${
+            showButtons ? 'opacity-100' : 'opacity-0'
           }`}
         >
           <button
@@ -387,14 +437,13 @@ export default function ValentinePage() {
             onMouseEnter={handleNoHover}
             onTouchStart={handleNoHover}
             className={`px-6 md:px-8 py-3 bg-gray-600 hover:bg-gray-700 text-white font-bold rounded-lg text-base md:text-lg transition-all duration-200 ${
-              noPosition.x !== 0 || noPosition.y !== 0 ? 'fixed' : 'relative'
+              noPosition ? 'fixed z-50' : 'relative'
             }`}
             style={
-              noPosition.x !== 0 || noPosition.y !== 0
+              noPosition
                 ? {
-                    left: `calc(50% + ${noPosition.x}px)`,
-                    top: `calc(50% + ${noPosition.y}px)`,
-                    transform: 'translate(-50%, -50%)',
+                    left: `${noPosition.left}px`,
+                    top: `${noPosition.top}px`,
                   }
                 : {}
             }
