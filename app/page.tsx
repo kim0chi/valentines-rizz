@@ -312,6 +312,7 @@ export default function ValentinePage() {
             alt="Your photo"
             width={250}
             height={250}
+            unoptimized
             className="rounded-lg w-52 h-52 md:w-64 md:h-64 object-cover border-4 border-white relative z-10"
           />
         </div>
