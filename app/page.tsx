@@ -1,103 +1,466 @@
-import Image from "next/image";
+'use client';
 
-export default function Home() {
-  return (
-    <div className="grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20 font-[family-name:var(--font-geist-sans)]">
-      <main className="flex flex-col gap-[32px] row-start-2 items-center sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
+import { useEffect, useState, useRef } from 'react';
+import dynamic from 'next/dynamic';
+import Image from 'next/image';
+
+const FlowerScene = dynamic(() => import('@/components/flower-scene'), {
+  ssr: false,
+});
+
+type Stage = 'greeting' | 'photo-request' | 'photo-display' | 'valentine' | 'accepted';
+
+export default function ValentinePage() {
+  const [stage, setStage] = useState<Stage>('greeting');
+  const [showText, setShowText] = useState(false);
+  const [showButtons, setShowButtons] = useState(false);
+  const [noPosition, setNoPosition] = useState({ x: 0, y: 0 });
+  const [uploadedPhoto, setUploadedPhoto] = useState<string | null>(null);
+  const [showCameraFlash, setShowCameraFlash] = useState(false);
+  const [audioEnabled, setAudioEnabled] = useState(false);
+  const noButtonRef = useRef<HTMLButtonElement>(null);
+  const audioRef = useRef<HTMLAudioElement>(null);
+  const bgMusicRef = useRef<HTMLAudioElement>(null);
+  const romanticMusicRef = useRef<HTMLAudioElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    // Reset animations when stage changes
+    setShowText(false);
+    setShowButtons(false);
+    
+    // Sequence of animations - text first, then buttons
+    const textTimer = setTimeout(() => setShowText(true), 100);
+    const buttonsTimer = setTimeout(() => setShowButtons(true), 800);
+
+    // Stop background music and play romantic music on accepted stage
+    if (stage === 'accepted') {
+      if (bgMusicRef.current) {
+        bgMusicRef.current.pause();
+      }
+      if (romanticMusicRef.current) {
+        romanticMusicRef.current.volume = 0.5;
+        romanticMusicRef.current.play().catch((error) => {
+          console.log('Romantic music play failed:', error);
+        });
+      }
+    }
+
+    return () => {
+      clearTimeout(textTimer);
+      clearTimeout(buttonsTimer);
+    };
+  }, [stage]);
+
+  const handleGreetingResponse = () => {
+    // Reset animations before stage change
+    setShowText(false);
+    setShowButtons(false);
+    
+    // Enable audio on first interaction
+    if (!audioEnabled && bgMusicRef.current) {
+      setAudioEnabled(true);
+      bgMusicRef.current.volume = 0.5;
+      bgMusicRef.current.currentTime = 8; // Start at 8 seconds
+      bgMusicRef.current.play().catch((error) => {
+        console.log('Background music play failed:', error);
+      });
+    }
+    setStage('photo-request');
+  };
+
+  const handlePhotoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        // Trigger camera flash effect
+        setShowCameraFlash(true);
+        setTimeout(() => {
+          setUploadedPhoto(reader.result as string);
+          setStage('photo-display');
+          setShowCameraFlash(false);
+        }, 1000);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const handlePhotoDisplayNext = () => {
+    // Reset animations before stage change
+    setShowText(false);
+    setShowButtons(false);
+    setStage('valentine');
+  };
+
+  const handleNoHover = () => {
+    // Play Vine Boom sound effect
+    if (audioRef.current) {
+      audioRef.current.volume = 1.0; // Set volume to maximum
+      audioRef.current.currentTime = 0;
+      audioRef.current.play().catch((error) => {
+        console.log('Audio play failed:', error);
+      });
+    }
+
+    const buttonWidth = 120;
+    const buttonHeight = 60;
+    const padding = 20; // Extra padding from edges
+
+    // Calculate max bounds to keep button fully visible
+    const maxX = (window.innerWidth - buttonWidth) / 2 - padding;
+    const minX = -(window.innerWidth - buttonWidth) / 2 + padding;
+    const maxY = (window.innerHeight - buttonHeight) / 2 - padding;
+    const minY = -(window.innerHeight - buttonHeight) / 2 + padding;
+
+    // Generate random position within bounds
+    const randomX = Math.random() * (maxX - minX) + minX;
+    const randomY = Math.random() * (maxY - minY) + minY;
+
+    setNoPosition({
+      x: randomX,
+      y: randomY,
+    });
+  };
+
+  const handleYes = () => {
+    setStage('accepted');
+  };
+
+  // Render audio elements that persist across all stages
+  const audioElements = (
+    <>
+      {/* Background music - plays on all stages except accepted */}
+      {stage !== 'accepted' && (
+        <audio 
+          ref={bgMusicRef} 
+          src="/Rizz Song (slowed  Reverb)  Edit.mp3" 
+          loop 
+          preload="auto" 
+          className="hidden"
         />
-        <ol className="list-inside list-decimal text-sm/6 text-center sm:text-left font-[family-name:var(--font-geist-mono)]">
-          <li className="mb-2 tracking-[-.01em]">
-            Get started by editing{" "}
-            <code className="bg-black/[.05] dark:bg-white/[.06] px-1 py-0.5 rounded font-[family-name:var(--font-geist-mono)] font-semibold">
-              app/page.tsx
-            </code>
-            .
-          </li>
-          <li className="tracking-[-.01em]">
-            Save and see your changes instantly.
-          </li>
-        </ol>
+      )}
+      {/* Romantic music - plays only on accepted stage */}
+      {stage === 'accepted' && (
+        <audio 
+          ref={romanticMusicRef} 
+          src="/Romantic music sound effect.mp3" 
+          loop 
+          preload="auto" 
+          className="hidden"
+        />
+      )}
+    </>
+  );
 
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
-          <a
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:w-auto"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
+  // Greeting Stage
+  if (stage === 'greeting') {
+    return (
+      <main className="w-full min-h-screen bg-black flex flex-col items-center justify-center p-4 overflow-hidden">
+        {audioElements}
+        <div
+          className={`mb-6 md:mb-8 transition-all duration-700 ${
+            showText ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'
+          }`}
+        >
+          <Image
+            src="/rizzface.gif"
+            alt="Rizzface"
+            width={200}
+            height={200}
+            unoptimized
+            className="rounded-lg w-40 h-40 md:w-52 md:h-52"
+          />
+        </div>
+
+        <h1
+          className={`text-3xl md:text-5xl font-bold text-white text-center mb-8 md:mb-12 transition-all duration-700 ${
+            showText ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'
+          }`}
+        >
+          hey
+        </h1>
+
+        <div
+          className={`transition-all duration-700 ${
+            showButtons ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'
+          }`}
+        >
+          <button
+            onClick={handleGreetingResponse}
+            className="px-8 py-3 bg-purple-500 hover:bg-purple-600 text-white font-bold rounded-lg text-base md:text-lg transition-colors duration-200"
           >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
-            />
-            Deploy now
-          </a>
-          <a
-            className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 w-full sm:w-auto md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Read our docs
-          </a>
+            hey...
+          </button>
         </div>
       </main>
-      <footer className="row-start-3 flex gap-[24px] flex-wrap items-center justify-center">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
+    );
+  }
+
+  // Photo Request Stage
+  if (stage === 'photo-request') {
+    return (
+      <main className="w-full min-h-screen bg-black flex flex-col items-center justify-center p-4 overflow-hidden">
+        {audioElements}
+        <div
+          className={`mb-6 md:mb-8 transition-all duration-700 ${
+            showText ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'
+          }`}
         >
           <Image
-            aria-hidden
-            src="/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
+            src="/wink.gif"
+            alt="Wink"
+            width={200}
+            height={200}
+            unoptimized
+            className="rounded-lg w-40 h-40 md:w-52 md:h-52"
           />
-          Learn
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
+        </div>
+
+        <h1
+          className={`text-2xl md:text-4xl font-bold text-white text-center mb-8 md:mb-12 max-w-lg transition-all duration-700 ${
+            showText ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'
+          }`}
+        >
+          can u send a picture of u real quick?
+        </h1>
+
+        <div
+          className={`transition-all duration-700 ${
+            showButtons ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'
+          }`}
+        >
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/*"
+            capture="user"
+            onChange={handlePhotoUpload}
+            className="hidden"
+          />
+          <button
+            onClick={() => fileInputRef.current?.click()}
+            className="px-6 py-3 bg-blue-500 hover:bg-blue-600 text-white font-bold rounded-lg text-base md:text-lg transition-colors duration-200 flex items-center gap-2"
+          >
+            <span>📸</span>
+            <span>Upload Photo</span>
+          </button>
+        </div>
+      </main>
+    );
+  }
+
+  // Photo Display Stage
+  if (stage === 'photo-display' && uploadedPhoto) {
+    return (
+      <main className="w-full min-h-screen bg-black flex flex-col items-center justify-center p-4 overflow-hidden relative">
+        {audioElements}
+        {/* Camera flash effect */}
+        <div
+          className={`fixed inset-0 bg-white pointer-events-none transition-opacity duration-500 z-50 ${
+            showCameraFlash ? 'opacity-100' : 'opacity-0'
+          }`}
+        />
+        
+        {/* GIF on top */}
+        <div
+          className={`mb-4 md:mb-6 transition-all duration-700 ${
+            showText ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'
+          }`}
         >
           <Image
-            aria-hidden
-            src="/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
+            src="/cat-mog-mogginf-cat.gif"
+            alt="Cat mogging"
+            width={200}
+            height={200}
+            unoptimized
+            className="rounded-lg w-40 h-40 md:w-52 md:h-52"
           />
-          Examples
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
+        </div>
+
+        {/* Text above photo */}
+        <h1
+          className={`text-2xl md:text-3xl font-bold text-white text-center mb-6 md:mb-8 max-w-2xl px-4 transition-all duration-700 ${
+            showText ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'
+          }`}
+        >
+          sorry i js needed to show santa what i want for christmas 😏
+        </h1>
+
+        {/* Uploaded Photo */}
+        <div
+          className={`mb-8 md:mb-12 transition-all duration-700 relative ${
+            showText ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'
+          }`}
+        >
+          {/* Heart background */}
+          <div className="absolute inset-0 flex items-center justify-center text-8xl md:text-9xl opacity-30 pointer-events-none">
+            ❤️
+          </div>
+          <Image
+            src={uploadedPhoto}
+            alt="Your photo"
+            width={250}
+            height={250}
+            className="rounded-lg w-52 h-52 md:w-64 md:h-64 object-cover border-4 border-white relative z-10"
+          />
+        </div>
+
+        <div
+          className={`transition-all duration-700 ${
+            showButtons ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'
+          }`}
+        >
+          <button
+            onClick={handlePhotoDisplayNext}
+            className="px-8 py-3 bg-green-500 hover:bg-green-600 text-white font-bold rounded-lg text-base md:text-lg transition-colors duration-200"
+          >
+            aweee, thank you!! <span>😊</span>
+          </button>
+        </div>
+      </main>
+    );
+  }
+
+  // Valentine Stage
+  if (stage === 'valentine') {
+    return (
+      <main className="w-full min-h-screen bg-black flex flex-col items-center justify-center p-4 overflow-hidden">
+        {audioElements}
+        <audio ref={audioRef} src="/Vine Boom sound effect meme.mp3" preload="auto" />
+
+        <div
+          className={`mb-6 md:mb-8 transition-all duration-700 ${
+            showText ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'
+          }`}
         >
           <Image
-            aria-hidden
-            src="/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
+            src="/rizz.gif"
+            alt="Rizz"
+            width={200}
+            height={200}
+            unoptimized
+            className="rounded-lg w-40 h-40 md:w-52 md:h-52"
           />
-          Go to nextjs.org →
-        </a>
-      </footer>
+        </div>
+
+        <h1
+          className={`text-3xl md:text-5xl font-bold text-white text-center mb-8 md:mb-12 max-w-2xl px-4 transition-all duration-700 ${
+            showText ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'
+          }`}
+        >
+          sooo, Will you be my Valentine?
+        </h1>
+
+        <div
+          className={`flex gap-4 md:gap-6 transition-all duration-700 ${
+            showButtons ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'
+          }`}
+        >
+          <button
+            onClick={handleYes}
+            className="px-6 md:px-8 py-3 bg-red-500 hover:bg-red-600 text-white font-bold rounded-lg text-base md:text-lg transition-colors duration-200"
+          >
+            OMG, YES!! ❤️
+          </button>
+
+          <button
+            ref={noButtonRef}
+            onMouseEnter={handleNoHover}
+            onTouchStart={handleNoHover}
+            className={`px-6 md:px-8 py-3 bg-gray-600 hover:bg-gray-700 text-white font-bold rounded-lg text-base md:text-lg transition-all duration-200 ${
+              noPosition.x !== 0 || noPosition.y !== 0 ? 'fixed' : 'relative'
+            }`}
+            style={
+              noPosition.x !== 0 || noPosition.y !== 0
+                ? {
+                    left: `calc(50% + ${noPosition.x}px)`,
+                    top: `calc(50% + ${noPosition.y}px)`,
+                    transform: 'translate(-50%, -50%)',
+                  }
+                : {}
+            }
+          >
+            hell nah
+          </button>
+        </div>
+      </main>
+    );
+  }
+
+  // Accepted Stage
+  return (
+    <div className="relative w-full min-h-screen bg-black flex flex-col items-center justify-center p-4 overflow-hidden">
+      {audioElements}
+      
+      {/* Heart Fireworks */}
+      <style jsx>{`
+        @keyframes firework {
+          0% {
+            transform: translate(0, 0) scale(0);
+            opacity: 1;
+          }
+          50% {
+            opacity: 1;
+          }
+          100% {
+            transform: translate(var(--tx), var(--ty)) scale(1);
+            opacity: 0;
+          }
+        }
+        .heart-firework {
+          position: absolute;
+          font-size: 2rem;
+          animation: firework 2s ease-out infinite;
+        }
+      `}</style>
+      
+      {[...Array(20)].map((_, i) => {
+        const angle = (i * 360) / 20;
+        const distance = 200 + Math.random() * 100;
+        const tx = Math.cos((angle * Math.PI) / 180) * distance;
+        const ty = Math.sin((angle * Math.PI) / 180) * distance;
+        const delay = Math.random() * 2;
+        
+        return (
+          <div
+            key={i}
+            className="heart-firework"
+            style={{
+              left: '50%',
+              top: '50%',
+              '--tx': `${tx}px`,
+              '--ty': `${ty}px`,
+              animationDelay: `${delay}s`,
+            } as React.CSSProperties & { '--tx': string; '--ty': string }}
+          >
+            ❤️
+          </div>
+        );
+      })}
+      
+      <div
+        className={`mb-6 md:mb-8 transition-all duration-700 ${
+          showText ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'
+        }`}
+      >
+        <Image
+          src="/eminem.gif"
+          alt="Eminem"
+          width={250}
+          height={250}
+          unoptimized
+          className="rounded-lg w-52 h-52 md:w-64 md:h-64"
+        />
+      </div>
+
+      <h1
+        className={`text-3xl md:text-4xl font-bold text-white text-center max-w-2xl px-4 transition-all duration-700 ${
+          showText ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'
+        }`}
+      >
+        happy valentines shawty, lucky to be your valentine 😉
+      </h1>
     </div>
   );
 }
