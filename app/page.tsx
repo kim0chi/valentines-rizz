@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useLayoutEffect, useState, useRef } from 'react';
+import { useEffect, useLayoutEffect, useState, useRef, useMemo } from 'react';
 import Image from 'next/image';
 import { getAssetPath } from '@/lib/assetPath';
 
@@ -20,7 +20,18 @@ export default function ValentinePage() {
   const romanticMusicRef = useRef<HTMLAudioElement>(null);
   const shutterAudioRef = useRef<HTMLAudioElement>(null);
   const audienceAudioRef = useRef<HTMLAudioElement>(null);
-  const fileInputRef = useRef<HTMLInputElement>(null);
+  const fireworkParticles = useMemo(
+    () =>
+      [...Array(20)].map((_, i) => {
+        const angle = (i * 360) / 20;
+        const distance = 200 + Math.random() * 100;
+        const tx = Math.cos((angle * Math.PI) / 180) * distance;
+        const ty = Math.sin((angle * Math.PI) / 180) * distance;
+        const delay = Math.random() * 2;
+        return { i, tx, ty, delay };
+      }),
+    []
+  );
 
   useLayoutEffect(() => {
     // Reset animations when stage changes
@@ -71,17 +82,20 @@ export default function ValentinePage() {
   };
 
   const handlePhotoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
+    const input = e.currentTarget;
+    const file = input.files?.[0];
     if (file) {
       // Check file size (max 5MB)
       if (file.size > 5 * 1024 * 1024) {
         alert('Photo size must be less than 5MB');
+        input.value = '';
         return;
       }
       
       // Check file type
       if (!file.type.startsWith('image/')) {
         alert('Please upload an image file');
+        input.value = '';
         return;
       }
 
@@ -110,12 +124,16 @@ export default function ValentinePage() {
           setUploadedPhoto(reader.result as string);
           setStage('photo-display');
           setShowCameraFlash(false);
+          input.value = '';
         }, 1000);
       };
       reader.onerror = () => {
         alert('Error reading file. Please try again.');
+        input.value = '';
       };
       reader.readAsDataURL(file);
+    } else {
+      input.value = '';
     }
   };
 
@@ -126,7 +144,7 @@ export default function ValentinePage() {
     setStage('valentine');
   };
 
-  const handleNoHover = (e?: React.MouseEvent | React.TouchEvent) => {
+  const handleNoHover = (e?: React.MouseEvent | React.TouchEvent | React.PointerEvent) => {
     // Prevent default behavior and stop propagation to avoid phantom clicks
     if (e) {
       e.preventDefault();
@@ -223,7 +241,7 @@ export default function ValentinePage() {
   // Greeting Stage
   if (stage === 'greeting') {
     return (
-      <main className="w-full min-h-screen bg-black flex flex-col items-center justify-center p-4 overflow-hidden">
+      <main className="w-full min-h-dvh bg-black flex flex-col items-center justify-center p-4 overflow-hidden">
         {audioElements}
         <div
           className={`mb-6 md:mb-8 transition-all duration-700 ${
@@ -255,7 +273,7 @@ export default function ValentinePage() {
         >
           <button
             onClick={handleGreetingResponse}
-            className="px-8 py-3 bg-purple-500 hover:bg-purple-600 text-white font-bold rounded-lg text-base md:text-lg transition-colors duration-200"
+            className="px-8 py-3 bg-purple-500 hover:bg-purple-600 text-white font-bold rounded-lg text-base md:text-lg transition-colors duration-200 touch-manipulation"
           >
             hey...
           </button>
@@ -267,7 +285,7 @@ export default function ValentinePage() {
   // Photo Request Stage
   if (stage === 'photo-request') {
     return (
-      <main className="w-full min-h-screen bg-black flex flex-col items-center justify-center p-4 overflow-hidden">
+      <main className="w-full min-h-dvh bg-black flex flex-col items-center justify-center p-4 overflow-hidden">
         {audioElements}
         <div
           className={`mb-6 md:mb-8 transition-all duration-700 ${
@@ -298,20 +316,20 @@ export default function ValentinePage() {
           }`}
         >
           <input
-            ref={fileInputRef}
+            id="photo-upload"
             type="file"
             accept="image/*"
             capture="user"
             onChange={handlePhotoUpload}
             className="hidden"
           />
-          <button
-            onClick={() => fileInputRef.current?.click()}
-            className="px-6 py-3 bg-blue-500 hover:bg-blue-600 text-white font-bold rounded-lg text-base md:text-lg transition-colors duration-200 flex items-center gap-2"
+          <label
+            htmlFor="photo-upload"
+            className="px-6 py-3 bg-blue-500 hover:bg-blue-600 text-white font-bold rounded-lg text-base md:text-lg transition-colors duration-200 flex items-center gap-2 cursor-pointer touch-manipulation select-none"
           >
             <span>📸</span>
             <span>Upload Photo</span>
-          </button>
+          </label>
         </div>
       </main>
     );
@@ -320,7 +338,7 @@ export default function ValentinePage() {
   // Photo Display Stage
   if (stage === 'photo-display' && uploadedPhoto) {
     return (
-      <main className="w-full min-h-screen bg-black flex flex-col items-center justify-center p-4 overflow-hidden relative">
+      <main className="w-full min-h-dvh bg-black flex flex-col items-center justify-center p-4 overflow-hidden relative">
         {audioElements}
         {/* Camera flash effect */}
         <div
@@ -381,7 +399,7 @@ export default function ValentinePage() {
         >
           <button
             onClick={handlePhotoDisplayNext}
-            className="px-8 py-3 bg-green-500 hover:bg-green-600 text-white font-bold rounded-lg text-base md:text-lg transition-colors duration-200"
+            className="px-8 py-3 bg-green-500 hover:bg-green-600 text-white font-bold rounded-lg text-base md:text-lg transition-colors duration-200 touch-manipulation"
           >
             aweee, thank you!! <span>😊</span>
           </button>
@@ -393,7 +411,7 @@ export default function ValentinePage() {
   // Valentine Stage
   if (stage === 'valentine') {
     return (
-      <main className="w-full min-h-screen bg-black flex flex-col items-center justify-center p-4 overflow-hidden">
+      <main className="w-full min-h-dvh bg-black flex flex-col items-center justify-center p-4 overflow-hidden">
         {audioElements}
         <audio ref={audioRef} src={getAssetPath("/Vine Boom sound effect meme.mp3")} preload="auto" />
 
@@ -421,24 +439,32 @@ export default function ValentinePage() {
         </h1>
 
         <div
-          className={`flex gap-4 md:gap-6 transition-opacity duration-700 ${
+          className={`flex flex-col sm:flex-row gap-4 md:gap-6 items-center transition-opacity duration-700 ${
             showButtons ? 'opacity-100' : 'opacity-0'
           }`}
         >
           <button
             onClick={handleYes}
-            className="px-6 md:px-8 py-3 bg-red-500 hover:bg-red-600 text-white font-bold rounded-lg text-base md:text-lg transition-colors duration-200"
+            className="px-6 md:px-8 py-3 bg-red-500 hover:bg-red-600 text-white font-bold rounded-lg text-base md:text-lg transition-colors duration-200 touch-manipulation"
           >
             OMG, YES!! ❤️
           </button>
 
           <button
             ref={noButtonRef}
-            onMouseEnter={handleNoHover}
-            onTouchStart={handleNoHover}
+            onPointerEnter={(e) => {
+              if (e.pointerType === 'mouse') {
+                handleNoHover(e);
+              }
+            }}
+            onPointerDown={(e) => {
+              if (e.pointerType !== 'mouse') {
+                handleNoHover(e);
+              }
+            }}
             className={`px-6 md:px-8 py-3 bg-gray-600 hover:bg-gray-700 text-white font-bold rounded-lg text-base md:text-lg transition-all duration-200 ${
               noPosition ? 'fixed z-50' : 'relative'
-            }`}
+            } touch-manipulation`}
             style={
               noPosition
                 ? {
@@ -457,7 +483,7 @@ export default function ValentinePage() {
 
   // Accepted Stage
   return (
-    <div className="relative w-full min-h-screen bg-black flex flex-col items-center justify-center p-4 overflow-hidden">
+    <div className="relative w-full min-h-dvh bg-black flex flex-col items-center justify-center p-4 overflow-hidden">
       {audioElements}
       
       {/* Heart Fireworks */}
@@ -482,29 +508,21 @@ export default function ValentinePage() {
         }
       `}</style>
       
-      {[...Array(20)].map((_, i) => {
-        const angle = (i * 360) / 20;
-        const distance = 200 + Math.random() * 100;
-        const tx = Math.cos((angle * Math.PI) / 180) * distance;
-        const ty = Math.sin((angle * Math.PI) / 180) * distance;
-        const delay = Math.random() * 2;
-        
-        return (
-          <div
-            key={i}
-            className="heart-firework"
-            style={{
-              left: '50%',
-              top: '50%',
-              '--tx': `${tx}px`,
-              '--ty': `${ty}px`,
-              animationDelay: `${delay}s`,
-            } as React.CSSProperties & { '--tx': string; '--ty': string }}
-          >
-            ❤️
-          </div>
-        );
-      })}
+      {fireworkParticles.map(({ i, tx, ty, delay }) => (
+        <div
+          key={i}
+          className="heart-firework"
+          style={{
+            left: '50%',
+            top: '50%',
+            '--tx': `${tx}px`,
+            '--ty': `${ty}px`,
+            animationDelay: `${delay}s`,
+          } as React.CSSProperties & { '--tx': string; '--ty': string }}
+        >
+          ❤️
+        </div>
+      ))}
       
       <div
         className={`mb-6 md:mb-8 transition-all duration-700 ${
